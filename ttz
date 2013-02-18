@@ -1,5 +1,4 @@
 #!/bin/bash
-# vim:ts=8
 
 function show_help() {
 	cat <<'EOT'
@@ -10,7 +9,6 @@ ttz allows searching and getting information on images from http://totoz.eu
           ttz [-v] [-a] -i STRING
 
    -h             print this message
-   -v             be verbose (for debugging)
    -n MAXRESULTS  display at most MAXRESULTS results (default: 10)
    -a             include not safe for work results
    -i             get information on totoz STRING
@@ -63,6 +61,11 @@ function info_totoz() {
 	) | column -t -s "#"
 }
 
+if ! which jshon >/dev/null 2>&1; then
+    echo "This script needs jshon"
+    exit 1
+fi
+
 OPTIND=1
 
 ACTION="search"
@@ -71,14 +74,11 @@ ONLYSFW=1
 VERBOSE=0
 MAXRESULTS=20
 
-while getopts "h?avi-n:" opt; do
+while getopts "h?ai-n:" opt; do
 	case "$opt" in
 		h|\?)
 			show_help
 			exit 0
-			;;
-		v)
-			VERBOSE=1
 			;;
 		a)
 			SERVER='http://nsfw.totoz.eu'
@@ -98,6 +98,8 @@ shift $((OPTIND-1))
 [ "$1" = "--" ] && shift
 
 STRING="$@"
+
+test -z "$STRING" && echo "Argument required" && show_help && exit 1
 
 case "$ACTION" in
 	search)
