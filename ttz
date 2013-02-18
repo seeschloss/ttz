@@ -6,12 +6,14 @@ ttz allows searching and getting information on images from http://totoz.eu
 
    Usage: ttz -h
           ttz [-v] [-n MAXRESULTS] [-a] STRING
-          ttz [-v] [-a] -i STRING
+          ttz [-v] [-a] -i TOTOZ
+          ttz [-v] [-a] -v TOTOZ
 
    -h             print this message
    -n MAXRESULTS  display at most MAXRESULTS results (default: 10)
    -a             include not safe for work results
-   -i             get information on totoz STRING
+   -i             get information on totoz TOTOZ
+   -v             display totoz TOTOZ in terminal (needs img2txt from libcaca)
 
    If invoked without `-i', default behavior is to search totoz matching STRING
 
@@ -29,6 +31,19 @@ function search_totoz() {
 	echo $JSON | jshon -e totozes -a -e name -u | head -n "$MAXRESULTS" | while read TOTOZ; do
 		echo "[:${TOTOZ}]"
 	done
+}
+
+function display_totoz() {
+	if ! which img2txt >/dev/null 2>&1; then
+		echo "This feature needs img2txt, from the libcaca package"
+		exit 1
+	fi
+
+	URL="${SERVER}/img/${STRING}"
+	TMPFILE=$(mktemp)
+	getdata "$URL" > "$TMPFILE"
+	img2txt "$TMPFILE" 2>/dev/null || echo "Cannot display [:$STRING]"
+	rm "$TMPFILE"
 }
 
 function info_totoz() {
@@ -74,7 +89,7 @@ ONLYSFW=1
 VERBOSE=0
 MAXRESULTS=20
 
-while getopts "h?ai-n:" opt; do
+while getopts "h?aiv-n:" opt; do
 	case "$opt" in
 		h|\?)
 			show_help
@@ -86,6 +101,9 @@ while getopts "h?ai-n:" opt; do
 			;;
 		i)
 			ACTION="info"
+			;;
+		v)
+			ACTION="display"
 			;;
 		n)
 			MAXRESULTS=$OPTARG
@@ -107,5 +125,8 @@ case "$ACTION" in
 		;;
 	info)
 		info_totoz "$STRING"
+		;;
+	display)
+		display_totoz "$STRING"
 		;;
 esac
