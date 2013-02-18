@@ -15,7 +15,8 @@ ttz allows searching and getting information on images from http://totoz.eu
    -i             get information on totoz TOTOZ
    -v             display totoz TOTOZ in terminal (needs img2txt from libcaca)
 
-   If invoked without `-i', default behavior is to search totoz matching STRING
+   If invoked without `-i' or `-v', default behavior is to search for totozes
+   matching STRING
 
 EOT
 }
