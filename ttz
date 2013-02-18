@@ -1,0 +1,109 @@
+#!/bin/bash
+# vim:ts=8
+
+function show_help() {
+	cat <<'EOT'
+ttz allows searching and getting information on images from http://totoz.eu
+
+   Usage: ttz -h
+          ttz [-v] [-n MAXRESULTS] [-a] STRING
+          ttz [-v] [-a] -i STRING
+
+   -h             print this message
+   -v             be verbose (for debugging)
+   -n MAXRESULTS  display at most MAXRESULTS results (default: 10)
+   -a             include not safe for work results
+   -i             get information on totoz STRING
+
+   If invoked without `-i', default behavior is to search totoz matching STRING
+
+EOT
+}
+
+function getdata() {
+	URL="$1"
+	curl --silent "$URL"
+}
+
+function search_totoz() {
+	URL="${SERVER}/search.json?terms=${STRING}"
+	JSON=$(getdata "$URL")
+	echo $JSON | jshon -e totozes -a -e name -u | head -n "$MAXRESULTS" | while read TOTOZ; do
+		echo "[:${TOTOZ}]"
+	done
+}
+
+function info_totoz() {
+	URL="${SERVER}/totoz/${STRING}/info.json"
+	JSON=$(getdata "$URL")
+	NSFW=$(echo $JSON | jshon -e nsfw -u)
+	test "$NSFW" -gt 0 -a "$ONLYSFW" -gt 0 && echo "This totoz is not safe for work" && exit
+
+	(
+	for key in name username created url md5sum format; do
+		echo -en "${key}:#"
+		echo $JSON | jshon -e "$key" -u
+	done
+	FRAMES=$(echo $JSON | jshon -e frames -u)
+	if [ "$FRAMES" -gt 1 ]; then
+		echo -e "animated:#$(echo $JSON | jshon -e frames -u) frames"
+	else
+		echo -e "animated:#no"
+	fi
+	WEIGHT=$(echo $JSON | jshon -e weight -u)
+	if [ "$WEIGHT" -gt 1024 ]; then
+		echo "weight:#"$(bc <<< "scale = 3; $WEIGHT/1024")" kB"
+	else
+		echo -e "weight:#$(echo $JSON | jshon -e weight -u) bytes"
+	fi
+	echo -e "size:#$(echo $JSON | jshon -e width -u)" \
+	        "x" \
+	        "$(echo $JSON | jshon -e height -u) px"
+	echo "tags:#$(echo $JSON | jshon -e tags -a -u | paste -sd ',' | sed 's/,/, /g')"
+	) | column -t -s "#"
+}
+
+OPTIND=1
+
+ACTION="search"
+SERVER='https://totoz.eu'
+ONLYSFW=1
+VERBOSE=0
+MAXRESULTS=20
+
+while getopts "h?avi-n:" opt; do
+	case "$opt" in
+		h|\?)
+			show_help
+			exit 0
+			;;
+		v)
+			VERBOSE=1
+			;;
+		a)
+			SERVER='http://nsfw.totoz.eu'
+			ONLYSFW=0
+			;;
+		i)
+			ACTION="info"
+			;;
+		n)
+			MAXRESULTS=$OPTARG
+			;;
+	esac
+done
+
+shift $((OPTIND-1))
+
+[ "$1" = "--" ] && shift
+
+STRING="$@"
+
+case "$ACTION" in
+	search)
+		search_totoz "$STRING"
+		;;
+	info)
+		info_totoz "$STRING"
+		;;
+esac
