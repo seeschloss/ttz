@@ -13,7 +13,7 @@ ttz allows searching and getting information on images from http://totoz.eu
    -n MAXRESULTS  display at most MAXRESULTS results (default: 10)
    -a             include not safe for work results
    -i             get information on totoz TOTOZ
-   -v             display totoz TOTOZ in terminal (needs img2txt from libcaca)
+   -v             display totoz TOTOZ in terminal (needs img2txt from libcaca or fbi for tty)
 
    If invoked without `-i' or `-v', default behavior is to search for totozes
    matching STRING
@@ -43,7 +43,11 @@ function display_totoz() {
 	URL="${SERVER}/img/${STRING}"
 	TMPFILE=$(mktemp)
 	getdata "$URL" > "$TMPFILE"
-	img2txt "$TMPFILE" 2>/dev/null || echo "Cannot display [:$STRING]"
+	fbida=$(which fbi >/dev/null 2>&1)
+	if [ -f $fbida ] && [ $TERM == linux ] ;
+		then fbi "$TMPFILE" 2>/dev/null ;
+		else img2txt "$TMPFILE" 2>/dev/null || echo "Cannot display ${STRING}"
+	fi
 	rm "$TMPFILE"
 }
 
